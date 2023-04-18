@@ -1,77 +1,123 @@
 import telegram
+from telegram.ext import Updater, CommandHandler, ConversationHandler, CallbackQueryHandler
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import CallbackQueryHandler, CommandHandler, MessageHandler, Filters, Updater
 
-# Define the bot token and create an instance of the bot
-TOKEN = "5736067711:AAHxUXgQUrrdAJJpCwscYch9V3cifIczrZg"
-bot = telegram.Bot(token=TOKEN)
+# Define conversation states
+SELECTING_PROPERTY, SELECTING_OPTION = range(2)
 
-# Define the function to handle the /setprofilepic command
-def set_profile_pic(update, context):
-    # Get the file ID of the photo from the message
-    photo_file_id = update.message.photo[-1].file_id
-    
-    # Get the file object for the photo
-    photo_file = bot.get_file(photo_file_id)
-    
-    # Download the photo and set it as the bot's profile picture
-    photo_file.download('image.png')
-    update.bot.set_my_profile_photo(open('image.png', 'rb'))
+# Define the property details
+properties = [
+    {
+        'title': 'balaji township',
+        'location': 'Address 1',
+        'key_map': 'Key Map 1',
+        'attractions': 'Attractions 1',
+        'price_per_sq_yard': '$100',
+        'plot_sizes': '10x10',
+        'offers': 'Offer 1',
+        'gallery': 'Gallery 1',
+        'amenities': 'Amenities 1',
+        'contact_number': 'Contact Number 1',
+        'video_link': 'Video Link 1'
+    },
+    {
+        'title': 'Property 2',
+        'location': 'Address 2',
+        'key_map': 'Key Map 2',
+        'attractions': 'Attractions 2',
+        'price_per_sq_yard': '$200',
+        'plot_sizes': '20x20',
+        'offers': 'Offer 2',
+        'gallery': 'Gallery 2',
+        'amenities': 'Amenities 2',
+        'contact_number': 'Contact Number 2',
+        'video_link': 'Video Link 2'
+    },
+    {
+        'title': 'Property 3',
+        'location': 'Address 3',
+        'key_map': 'Key Map 3',
+        'attractions': 'Attractions 3',
+        'price_per_sq_yard': '$300',
+        'plot_sizes': '30x30',
+        'offers': 'Offer 3',
+        'gallery': 'Gallery 3',
+        'amenities': 'Amenities 3',
+        'contact_number': 'Contact Number 3',
+        'video_link': 'Video Link 3'
+    }
+]
 
-# Set up the handler for the /setprofilepic command
-updater = Updater(token=TOKEN, use_context=True)
-dispatcher = updater.dispatcher
-set_profile_pic_handler = CommandHandler('setprofilepic', set_profile_pic)
-dispatcher.add_handler(set_profile_pic_handler)
-
-
-# Define the functions to handle different commands/messages
+# Define the start command handler
 def start(update, context):
-    # Create a menu with options
-    keyboard = [            
-        [InlineKeyboardButton("Website", callback_data='website'),
-         InlineKeyboardButton("Shopping Portal", callback_data='shopping')],
-        [InlineKeyboardButton("Real Estate Portal", callback_data='realestate'),
-         InlineKeyboardButton("Business Plan", callback_data='businessplan')],
-        [InlineKeyboardButton("Real Estate Plan", callback_data='realestateplan'),
-         InlineKeyboardButton("Zoom Meeting Link", callback_data='zoom')],
-        [InlineKeyboardButton("Facebook Page", callback_data='facebook'),
-         InlineKeyboardButton("Instagram Page", callback_data='instagram')],
-        [InlineKeyboardButton("Telegram Group", callback_data='telegram')]
-    ]
+    # Send the welcome message
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Hello! Welcome to our Real Estate bot. Please select a property to view its details:")
+    # Create a list of property buttons
+    keyboard = [[InlineKeyboardButton(property['title'], callback_data=str(i))] for i, property in enumerate(properties)]
+    # Send the property buttons to the user
     reply_markup = InlineKeyboardMarkup(keyboard)
-    context.bot.send_message(chat_id=update.message.chat_id, text="Hello! Welcome to Dream Catchers Group. How can I assist you?", reply_markup=reply_markup)
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Please select a property:", reply_markup=reply_markup)
+    # Set the SELECTING_PROPERTY state
+    return SELECTING_PROPERTY
 
-def option_handler(update, context):
+# Define the callback query handler
+def property_selection_callback(update, context):
+    # Get the selected property index
     query = update.callback_query
-    option = query.data
-    if option == 'website':
-        context.bot.send_message(chat_id=query.message.chat_id, text='www.dreamcatchers.group')
-    elif option == 'shopping':
-        context.bot.send_message(chat_id=query.message.chat_id, text='shopping.dreamcatchers.group')
-    elif option == 'realestate':
-        context.bot.send_message(chat_id=query.message.chat_id, text='www.vasundharadevelopers.co.in')
-    elif option == 'businessplan':
-        context.bot.send_document(chat_id=query.message.chat_id, document=open('DCGROUP.pdf', 'rb'))
-    elif option == 'realestateplan':
-        context.bot.send_document(chat_id=query.message.chat_id, document=open('VDGROUP.pdf', 'rb'))
-    elif option == 'zoom':
-        context.bot.send_message(chat_id=query.message.chat_id, text='Zoom meeting link: https://us06web.zoom.us/j/4304265648?pwd=VmJrNmdUME1hd2VUK1VwRVBGNzhSZz09\nMeeting password: 1000')
-    elif option == 'facebook':
-        context.bot.send_message(chat_id=query.message.chat_id, text='https://www.facebook.com/dcgroupofficial')
-    elif option == 'instagram':
-        context.bot.send_message(chat_id=query.message.chat_id, text='https://www.instagram.com/_dream_catchers_official')
-    elif option == 'telegram':
-        context.bot.send_message(chat_id=query.message.chat_id, text='https://t.me/dcgroupofficial')
+    property_index = int(query.data)
+    # Create a list of property option buttons
+    keyboard = [
+        [InlineKeyboardButton("Location", callback_data=f"{property_index}-location")],
+        [InlineKeyboardButton("Key Map", callback_data=f"{property_index}-key_map")],
+        [InlineKeyboardButton("Attractions", callback_data=f"{property_index}-attractions")],
+        [InlineKeyboardButton("Price per Sq Yard", callback_data=f"{property_index}-price_per_sq_yard")],
+        [InlineKeyboardButton("Plot Sizes", callback_data=f"{property_index}-plot_sizes")],
+        [InlineKeyboardButton("Offers", callback_data=f"{property_index}-offers")],
+        [InlineKeyboardButton("Gallery", callback_data=f"{property_index}-gallery")],
+        [InlineKeyboardButton("Amenities", callback_data=f"{property_index}-amenities")],
+        [InlineKeyboardButton("Contact Number", callback_data=f"{property_index}-contact_number")],
+        [InlineKeyboardButton("Video Link", callback_data=f"{property_index}-video_link")]
+    ]
+    # Send the property options to the user
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    query.edit_message_text(text=f"You have selected {properties[property_index]['title']}. Please select an option to view its details:", reply_markup=reply_markup)
+    # Set the SELECTING_OPTION state
+    return SELECTING_OPTION
 
-# Set up the handlers for different commands/messages
-updater = Updater(token=TOKEN, use_context=True)
-dispatcher = updater.dispatcher
-start_handler = CommandHandler('start', start)
-option_handler = CallbackQueryHandler(option_handler)
-dispatcher.add_handler(start_handler)
-dispatcher.add_handler(option_handler)
+# Define the option selection callback
+def option_selection_callback(update, context):
+    # Get the selected option and property index
+    query = update.callback_query
+    data = query.data.split("-")
+    property_index = int(data[0])
+    option = data[1]
+    # Send the selected option details to the user
+    query.edit_message_text(text=f"{option.capitalize()}: {properties[property_index][option]}")
+    # Set the SELECTING_OPTION state
+    return SELECTING_OPTION
 
-# Start the bot
-updater.start_polling()
-updater.idle()
+# Define the main function
+def main():
+    # Create the updater and dispatcher
+    updater = Updater(token='5465291810:AAH9uuoefLUsATeSspNdLi2q1O9LCkWEUkc', use_context=True)
+    dispatcher = updater.dispatcher
+
+    # Define the conversation handler
+    conv_handler = ConversationHandler(
+        entry_points=[CommandHandler('start', start)],
+        states={
+            SELECTING_PROPERTY: [CallbackQueryHandler(property_selection_callback)],
+            SELECTING_OPTION: [CallbackQueryHandler(option_selection_callback)]
+        },
+        fallbacks=[CommandHandler('start', start)]
+    )
+
+    # Add the conversation handler to the dispatcher
+    dispatcher.add_handler(conv_handler)
+
+    # Start the bot
+    updater.start_polling()
+    updater.idle()
+# Call the main function
+if __name__ == '__main__':
+    main()
